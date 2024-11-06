@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "notebooks"
+version = "1.0.0"
+description = "Notebooks de estudos para o projeto da fábrica de PCB's"
+authors = ["pab-h <dev.pab.2020@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+opencv-python = "^4.10.0.84"
+matplotlib = "^3.9.2"
+ipykernel = "^6.29.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
