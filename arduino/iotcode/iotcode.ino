@@ -1,7 +1,3 @@
-#define MAX_PACKAGE_LEN 256
-#define MAX_COMMAND_LEN 16
-#define MAX_POSITION_DIGITS 4
-
 class Executable {
   public:
     virtual void PENUP();
@@ -12,9 +8,11 @@ class Executable {
 
 class Command {
   public:
-    char name[MAX_COMMAND_LEN];
-    int x;
-    int y;
+    String name;
+    unsigned int x;
+    unsigned int y;
+
+    Command();
 };
 
 class IotReader {
@@ -22,22 +20,26 @@ class IotReader {
     Command command;
     Executable* executor;
     
-    int packageIndex;
-    char inByte;
-    char package[MAX_PACKAGE_LEN];
+    String package;
 
     void readPackage();
     void requestPackage();
     void parserCommand();
     void processCommand();
-
+  
   public:
     void readLine();
 
     IotReader(Executable* executor);
-    
   
 };
+
+Command::Command() {
+  this->name = "";
+  this->x = 0;
+  this->y = 0;
+
+}
 
 IotReader::IotReader(Executable* executor) {
   this->executor = executor;
@@ -45,24 +47,16 @@ IotReader::IotReader(Executable* executor) {
 
 void IotReader::readPackage() {
   while(Serial.available() > 0) {
-    this->inByte = Serial.read();
+    Serial.print("Reading: ");
+    Serial.print(Serial.available());
+    Serial.println(" Bytes!");
     
-    if (this->inByte != '\n' && (this->packageIndex < MAX_PACKAGE_LEN - 1)) {
-      this->package[packageIndex] = this->inByte;
-      this->packageIndex++;
+    this->package = Serial.readStringUntil('\n');
+    this->package.trim();
 
-      Serial.print("Reading: ");
-      Serial.println(this->inByte);
-      
-    } else {
-      this->package[this->packageIndex] = '\0'; 
-      this->packageIndex = 0;
-
-      Serial.print("Read: ");
-      Serial.println(this->package);
-
-    }
-  }
+    Serial.print("Read: ");
+    Serial.println(this->package);
+  }    
 }
 
 void IotReader::requestPackage() {
@@ -70,58 +64,43 @@ void IotReader::requestPackage() {
 }
 
 void IotReader::parserCommand() {
-    int i = 0;
-    int j = 0;
-    
-    char xStr[MAX_POSITION_DIGITS] = {0};
-    char yStr[MAX_POSITION_DIGITS] = {0};
+    int firstSpace = this->package.indexOf(' ');
 
-    while (this->package[i] != '\0' && this->package[i] != ' ' && j < MAX_COMMAND_LEN - 1) {
-        this->command.name[j++] = this->package[i++];
-    }
-    
-    this->command.name[j] = '\0';
-    i++;
-    j = 0;
-
-    if (this->package[i] == '\0') {
-      this->command.x = -1;
-      this->command.y = -1;
+    if (firstSpace == -1) {
+      this->command.name = this->package;  
+      this->command.x = 0;
+      this->command.y = 0;
+  
       return;
     }
 
-    while (this->package[i] != '\0' && this->package[i] != ' ' && j < MAX_POSITION_DIGITS - 1) {
-        xStr[j++] = this->package[i++];
-    }
+    this->command.name = this->package.substring(0, firstSpace);
     
-    xStr[j] = '\0';
-    this->command.x = atoi(xStr);
-    i++;
-    j = 0;
+    String args = this->package.substring(firstSpace + 1);
 
-    while (this->package[i] != '\0' && this->package[i] != ' ' && j < MAX_POSITION_DIGITS - 1) {
-        yStr[j++] = this->package[i++];
-    }
+    int secondSpace = args.indexOf(' ');
     
-    yStr[j] = '\0';
-    this->command.y = atoi(yStr);
+    command.x = args.substring(0, secondSpace).toInt();
+    command.y = args.substring(secondSpace + 1).toInt();
 }
-
+  
 void IotReader::processCommand() {
-  if (strcmp(this->command.name, "PENUP") == 0) {
+  if (this->package.equals("PENUP")) {
     this->executor->PENUP();
   }
 
-  if (strcmp(this->command.name, "PENDOWN") == 0) {
+  if (this->package.equals("PENDOWN")) {
     this->executor->PENDOWN();  
   }
 
-  if (strcmp(this->command.name, "GOTO") == 0) {
+  if (this->package.equals("GOTO")) {
     this->executor->GOTO(
       this->command.x,
       this->command.y
     ); 
   }
+
+  this->package = "";
   
 }
 
